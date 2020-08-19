@@ -99,10 +99,19 @@ if __name__ == "__main__":
   receiveDataText = ScrolledText(root, width=43, height=16)
   receiveDataText.grid(row=0, column=0, rowspan=6)
 
-  operationLabel: Any = Label(root, text="Send Text (utf-8)").grid(column=0, row=6, columnspan=2)
+  operationLabel: Any = Label(root, text="Send").grid(column=0, row=6, columnspan=2)
+
   # Send Text
   sendText = Text(root, width=45, height=5)
   sendText.grid(row=7, column=0, rowspan=2)
+
+  # Data Format Button
+  dataFormat = IntVar()
+  utf8FormatRadioButton = Radiobutton(root, text="UTF-8", variable=dataFormat, value="UTF-8")
+  utf8FormatRadioButton.grid(column=1, row=6)
+  hexFormatRadioButton = Radiobutton(root, text="Hex", variable=dataFormat, value="Hex")
+  hexFormatRadioButton.grid(column=2, row=6)
+  utf8FormatRadioButton.select()
 
   # Open/Close Button
   operateButtonText = StringVar()
@@ -155,14 +164,22 @@ if __name__ == "__main__":
   sendButton = Button(root, text="Send", width=9, height=1)
   sendButton.grid(column=1, row=8, columnspan=2)
 
-  # Send text as UTF-8
+  # Send text
   def sendButtonListener():
     text = sendText.get(0.0, END)
     if not serialPort.is_open:
       print("Port is closed.")
     else:
       try:
-        serialPort.write(text.encode("utf-8"))
+        if dataFormat == "UTF-8":
+          serialPort.write(text.encode("utf-8"))
+        if dataFormat == "Hex":
+          # Remove 0x(0X) at the beginning of text
+          if text.startswith("0x"):
+            text.replace("0x", "", 1)
+          if text.startswith("0X"):
+            text.replace("0X", "", 1)
+          serialPort.write(bytes.fromhex(text))
         sendText.delete(0.0, END)
       except Exception as e:
         print(e)
