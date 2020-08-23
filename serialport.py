@@ -12,7 +12,6 @@ from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from typing import Any
 
-
 # Get serial port name
 def getComList():
   try:
@@ -24,8 +23,7 @@ def getComList():
   except Exception as e:
     print(e)
 
-
-# Receive data from serial port in the independent thread
+# Receive data from serial port in independent thread
 def receiveDataThread(serialPort: serial.Serial, receiveDataText: ScrolledText):
   print("Receive thread start")
   while True:
@@ -42,6 +40,10 @@ def receiveDataThread(serialPort: serial.Serial, receiveDataText: ScrolledText):
       print("Port is closed, receive thread exit")
       sys.exit(1)
 
+# Show messagebox in independent thread
+def showMessage(title: str, message: str):
+  thread = threading.Thread(target=messagebox.showinfo, args=(title, message))
+  thread.start()
 
 if __name__ == "__main__":
   # Init serialPort object
@@ -54,6 +56,10 @@ if __name__ == "__main__":
   windowWidth = 500
   windowHeight = 370
 
+  # Receive Text
+  receiveDataText = ScrolledText(root, width=43, height=16)
+  receiveDataText.grid(row=0, column=0, rowspan=7)
+
   settingsLabel: Label = Label(root, text="Settings").grid(column=1, row=0, columnspan=2)
   # Port COM
   comLabel: Label = Label(root, text="Port").grid(column=1, row=1)
@@ -65,14 +71,14 @@ if __name__ == "__main__":
     comCombo["values"] = portComList
     comCombo.current(0)
   else:
-    messagebox.showinfo(title="Message", message="No port detected")
+    showMessage(title="Message", message="No port detected")
 
   # Speed
   speedLabel: Label = Label(root, text="Speed").grid(column=1, row=2)
   speedCombo = ttk.Combobox(root, state="readonly", width=8)
   speedCombo.grid(column=2, row=2)
   speedCombo["values"] = ("9600", "19200", "38400", "115200")
-  speedCombo.current(1)
+  speedCombo.current(0)
 
   # Data Bits
   dateBitsLabel: Label = Label(root, text="Data Bits").grid(column=1, row=3)
@@ -86,44 +92,39 @@ if __name__ == "__main__":
   stopBitsCombo = ttk.Combobox(root, state="readonly", width=8)
   stopBitsCombo.grid(column=2, row=4)
   stopBitsCombo["values"] = ("1", "1.5", "2")
-  stopBitsCombo.current(2)
+  stopBitsCombo.current(0)
 
   # Parity Bits
   parityLabel: Label = Label(root, text="Parity Bits").grid(column=1, row=5)
   parityCombo = ttk.Combobox(root, state="readonly", width=8)
   parityCombo.grid(column=2, row=5)
   parityCombo["values"] = ("N", "O", "E")
-  parityCombo.current(1)
+  parityCombo.current(0)
 
-  # Receive Text
-  receiveDataText = ScrolledText(root, width=43, height=16)
-  receiveDataText.grid(row=0, column=0, rowspan=6)
+  # Data Format Button
+  dataFormatLabel: Label = Label(root, text="Format").grid(column=1, row=6)
+  dataFormatCombo = ttk.Combobox(root, state="readonly", width=8)
+  dataFormatCombo.grid(column=2, row=6)
+  dataFormatCombo["values"] = ("ASCII", "UTF-8", "Hex")
+  dataFormatCombo.current(0)
 
-  operationLabel: Label = Label(root, text="Send").grid(column=0, row=6, columnspan=2)
+  operationLabel: Label = Label(root, text="Send").grid(column=0, row=7, columnspan=2)
 
   # Send Text Input
   sendText = Text(root, width=45, height=5)
-  sendText.grid(row=7, column=0, rowspan=2)
-
-  # Data Format Button
-  dataFormat = StringVar()
-  utf8FormatRadioButton = Radiobutton(root, text="UTF-8", variable=dataFormat, value="UTF-8")
-  utf8FormatRadioButton.grid(column=1, row=6)
-  hexFormatRadioButton = Radiobutton(root, text="Hex", variable=dataFormat, value="Hex")
-  hexFormatRadioButton.grid(column=2, row=6)
-  utf8FormatRadioButton.select()
+  sendText.grid(row=8, column=0, rowspan=2)
 
   # Open/Close Button
   operateButtonText = StringVar()
   operateButtonText.set("Open Port")
   operateButton = Button(root, textvariable=operateButtonText, width=9)
-  operateButton.grid(column=1, row=7, columnspan=2)
+  operateButton.grid(column=1, row=8, columnspan=2)
 
   def operateButtonListener():
     # Check and set port
     serialPort.port = comCombo.get()
     if serialPort.port == None:
-      messagebox.showinfo(title="Message", message="No port")
+      showMessage(title="Message", message="No port")
       return
     serialPort.baudrate = int(speedCombo.get())
     serialPort.bytesize = int(dataBitsCombo.get())
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     # Open port
     if operateButton["text"] == "Open Port":
       if serialPort.is_open:
-        messagebox.showinfo(title="Message", message="Port is opened")
+        showMessage(title="Message", message="Port is opened")
       else:
         try:
           print("Open", serialPort.port)
@@ -147,7 +148,7 @@ if __name__ == "__main__":
     # Close port
     elif operateButton["text"] == "Close Port":
       if not serialPort.is_open:
-        messagebox.showinfo(title="Message", message="Port is closed")
+        showMessage(title="Message", message="Port is closed")
       else:
         try:
           print("Close", serialPort.port)
@@ -162,7 +163,7 @@ if __name__ == "__main__":
 
   # Send Button
   sendButton = Button(root, text="Send", width=9, height=1)
-  sendButton.grid(column=1, row=8, columnspan=2)
+  sendButton.grid(column=1, row=9, columnspan=2)
 
   # Send text
   def sendButtonListener():
@@ -171,9 +172,11 @@ if __name__ == "__main__":
       print("Port is closed")
     else:
       try:
-        if dataFormat == "UTF-8":
+        if dataFormatCombo.get() == "ASCII":
+          serialPort.write(text.encode("ascii"))
+        if dataFormatCombo.get() == "UTF-8":
           serialPort.write(text.encode("utf-8"))
-        if dataFormat == "Hex":
+        if dataFormatCombo.get() == "Hex":
           # Remove 0x(0X) at the beginning of text
           if text.startswith("0x"):
             text.replace("0x", "", 1)
