@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import serial
-import serial.tools.list_ports
 import sys
 import threading
 import time
 
+from serial.tools import list_ports
 from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
@@ -15,7 +15,7 @@ from typing import Any
 # Get serial port name
 def getComList():
   try:
-    portList: list = list(serial.tools.list_ports.comports())
+    portList: list = list(list_ports.comports())
     portComList: list = []
     for port in portList:
       portComList.append(port[0])
@@ -154,29 +154,31 @@ if __name__ == "__main__":
       if serialPort.is_open:
         showMessage(title="Message", message="Port is opened")
       else:
+        print("Open port", serialPort.port)
         try:
-          print("Open", serialPort.port)
           serialPort.open()
-          if serialPort.is_open:
-            operateButtonText.set("Close Port")
-            receiveDataText.insert(INSERT, "--- Port has been opend ---\n")
-            receiveThread = threading.Thread(target=receiveDataThread, args=(serialPort, receiveDataText))
-            receiveThread.start()
         except Exception as e:
           print(e)
+        if serialPort.is_open:
+          receiveDataText.insert(INSERT, "\n--- Port has been opened ---\n")
+          receiveThread = threading.Thread(target=receiveDataThread, args=(serialPort, receiveDataText))
+          receiveThread.start()
     # Close port
     elif operateButton["text"] == "Close Port":
       if not serialPort.is_open:
         showMessage(title="Message", message="Port is closed")
       else:
+        print("Close port", serialPort.port)
         try:
-          print("Close", serialPort.port)
           serialPort.close()
-          if not serialPort.is_open:
-            operateButtonText.set("Open Port")
-            receiveDataText.insert(INSERT, "--- Port has been closed ---\n")
         except Exception as e:
           print(e)
+        if not serialPort.is_open:
+          receiveDataText.insert(INSERT, "\n--- Port has been closed ---\n")
+    if serialPort.is_open:
+      operateButtonText.set("Close Port")
+    else:
+      operateButtonText.set("Open Port")
 
   # Send Button
   sendButton = Button(root, text="Send", width=9, height=1)
