@@ -12,16 +12,18 @@ from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from typing import Any
 
+
 # Get serial port name
 def getComList():
+  portComList: list = []
   try:
     portList: list = list(list_ports.comports())
-    portComList: list = []
     for port in portList:
       portComList.append(port[0])
-    return portComList
   except Exception as e:
     print(e)
+  return portComList
+
 
 # Receive data from serial port in independent thread
 def receiveDataThread(serialPort: serial.Serial, receiveDataText: ScrolledText):
@@ -31,23 +33,26 @@ def receiveDataThread(serialPort: serial.Serial, receiveDataText: ScrolledText):
       try:
         readData = serialPort.readall()
         if len(readData) > 0:
-          if receiveDataFormatCombo.get() == "UTF-8":
+          receiveDataFormat: str = receiveDataFormatCombo.get()
+          if receiveDataFormat == "UTF-8":
             receiveDataText.insert(END, bytes(readData).decode("utf-8"))
-          if receiveDataFormatCombo.get() == "ASCII":
+          if receiveDataFormat == "ASCII":
             receiveDataText.insert(END, bytes(readData).decode("ascii"))
-          if receiveDataFormatCombo.get() == "Hex":
+          if receiveDataFormat == "Hex":
             receiveDataText.insert(END, bytes(readData).hex())
       except Exception as e:
         print(e)
         time.sleep(1)
     else:
-      print("Port is closed, receive thread exit")
+      print("Port is closed, receiving thread exit")
       sys.exit(1)
+
 
 # Show messagebox in independent thread
 def showMessage(title: str, message: str):
   thread = threading.Thread(target=messagebox.showinfo, args=(title, message))
   thread.start()
+
 
 if __name__ == "__main__":
   # Init serialPort object
@@ -64,21 +69,28 @@ if __name__ == "__main__":
   receiveDataText = ScrolledText(root, width=43, height=16)
   receiveDataText.grid(row=0, column=0, rowspan=7)
 
-  settingsLabel: Label = Label(root, text="Settings").grid(column=1, row=0, columnspan=2)
+  settingsLabel: Label = Label(
+      root, text="Settings").grid(
+          column=1, row=0, columnspan=2)
 
   # Send Data Format
-  receiveDataFormatLabel: Label = Label(root, text="Format").grid(column=1, row=1)
+  receiveDataFormatLabel: Label = Label(
+      root, text="Format").grid(
+          column=1, row=1)
   receiveDataFormatCombo = ttk.Combobox(root, state="readonly", width=8)
   receiveDataFormatCombo.grid(column=2, row=1)
   receiveDataFormatCombo["values"] = ("UTF-8", "ASCII", "Hex")
   receiveDataFormatCombo.current(0)
-  receiveDataFormatCombo.bind("<<ComboboxSelected>>", lambda event: changeSendDataFormat())
+  receiveDataFormatCombo.bind("<<ComboboxSelected>>",
+                              lambda event: changeSendDataFormat())
+
   def changeSendDataFormat():
-    if receiveDataFormatCombo.get() == "UTF-8":
+    receiveDataFormat: str = receiveDataFormatCombo.get()
+    if receiveDataFormat == "UTF-8":
       sendDataFormatCombo.current(0)
-    if receiveDataFormatCombo.get() == "ASCII":
+    if receiveDataFormat == "ASCII":
       sendDataFormatCombo.current(1)
-    if receiveDataFormatCombo.get() == "Hex":
+    if receiveDataFormat == "Hex":
       sendDataFormatCombo.current(2)
 
   # Port COM
@@ -91,7 +103,7 @@ if __name__ == "__main__":
     comCombo["values"] = portComList
     comCombo.current(0)
   else:
-    showMessage(title="Message", message="No port detected")
+    showMessage("Message", "No port detected")
 
   # Speed
   speedLabel: Label = Label(root, text="Speed").grid(column=1, row=3)
@@ -133,48 +145,48 @@ if __name__ == "__main__":
   sendDataFormatCombo["values"] = ("UTF-8", "ASCII", "Hex")
   sendDataFormatCombo.current(0)
 
-  # Open/Close Button
+  # Open Button
   operateButtonText = StringVar()
   operateButtonText.set("Open Port")
-  operateButton = Button(root, textvariable=operateButtonText, width=9)
-  operateButton.grid(column=1, row=9, columnspan=2)
-  operateButton.bind("<Button-1>", lambda event: operatePort())
-  def operatePort():
+  openButton = Button(root, textvariable=operateButtonText, width=9)
+  openButton.grid(column=1, row=9, columnspan=2)
+  openButton.bind("<Button-1>", lambda event: openPort())
+
+  def openPort():
     # Check and set port
     serialPort.port = comCombo.get()
     if serialPort.port == "":
-      showMessage(title="Message", message="No port selected")
+      showMessage("Error", "No port selected")
       return
     serialPort.baudrate = int(speedCombo.get())
     serialPort.bytesize = int(dataBitsCombo.get())
     serialPort.stopbits = float(stopBitsCombo.get())
     serialPort.parity = parityCombo.get()
     # Open port
-    if operateButton["text"] == "Open Port":
+    if openButton["text"] == "Open Port":
       if serialPort.is_open:
-        showMessage(title="Message", message="Port is opened")
+        showMessage("Error", "Port is opened")
       else:
         print("Open port", serialPort.port)
         try:
           serialPort.open()
+          receiveDataText.insert(INSERT, "\n--- Port has been opened ---\n")
+          receiveThread = threading.Thread(
+              target=receiveDataThread, args=(serialPort, receiveDataText))
+          receiveThread.start()
         except Exception as e:
           print(e)
-        if serialPort.is_open:
-          receiveDataText.insert(INSERT, "\n--- Port has been opened ---\n")
-          receiveThread = threading.Thread(target=receiveDataThread, args=(serialPort, receiveDataText))
-          receiveThread.start()
     # Close port
-    elif operateButton["text"] == "Close Port":
+    elif openButton["text"] == "Close Port":
       if not serialPort.is_open:
-        showMessage(title="Message", message="Port is closed")
+        showMessage("Message", "Port is closed")
       else:
         print("Close port", serialPort.port)
         try:
           serialPort.close()
+          receiveDataText.insert(INSERT, "\n--- Port has been closed ---\n")
         except Exception as e:
           print(e)
-        if not serialPort.is_open:
-          receiveDataText.insert(INSERT, "\n--- Port has been closed ---\n")
     if serialPort.is_open:
       operateButtonText.set("Close Port")
     else:
@@ -184,26 +196,27 @@ if __name__ == "__main__":
   sendButton = Button(root, text="Send", width=9, height=1)
   sendButton.grid(column=1, row=10, columnspan=2)
   sendButton.bind("<Button-1>", lambda event: sendData())
+
   def sendData():
-    text: str = sendText.get(0.0, END)
     if not serialPort.is_open:
-      print("Port is closed")
+      showMessage("Error", "Port is closed")
     else:
+      # Remove \n in the end
+      text: str = sendText.get(0.0, END)[:-1]
+      sendDataFormat: str = sendDataFormatCombo.get()
+      if sendDataFormat == "UTF-8":
+        serialPort.write(text.encode("utf-8"))
+      if sendDataFormat == "ASCII":
+        serialPort.write(text.encode("ascii"))
+      if sendDataFormat == "Hex":
+        # Remove 0x(0X) at the beginning of text
+        if text.startswith("0x") or text.startswith("0X"):
+          text = text[2:]
+        # Add a 0 at the beginning of text which have odd characters
+        if (len(text) % 2) == 1:
+          text = "0" + text
       try:
-        if sendDataFormatCombo.get() == "UTF-8":
-          serialPort.write(text.encode("utf-8"))
-        if sendDataFormatCombo.get() == "ASCII":
-          serialPort.write(text.encode("ascii"))
-        if sendDataFormatCombo.get() == "Hex":
-          # Remove 0x(0X) at the beginning of text
-          if text.startswith("0x"):
-            text.replace("0x", "", 1)
-          if text.startswith("0X"):
-            text.replace("0X", "", 1)
-          # Add a 0 at the beginning of text which have odd characters
-          if (len(text) % 2) == 1:
-            text = "0" + text
-          serialPort.write(bytes.fromhex(text))
+        serialPort.write(bytes.fromhex(text))
         sendText.delete(0.0, END)
       except Exception as e:
         print(e)
@@ -211,7 +224,9 @@ if __name__ == "__main__":
   # Set size and center window
   screenWidth: int = root.winfo_screenwidth()
   screenHeight: int = root.winfo_screenheight()
-  size = "%dx%d+%d+%d" % (windowWidth, windowHeight, (screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2)
+  size = "%dx%d+%d+%d" % (windowWidth, windowHeight,
+                          (screenWidth - windowWidth) / 2,
+                          (screenHeight - windowHeight) / 2)
   root.geometry(size)
   root.resizable(width=False, height=False)
 
