@@ -40,9 +40,9 @@ def receiveDataThread(serialPort: serial.Serial, receiveDataText: ScrolledText):
             receiveDataText.insert(END, bytes(readData).decode("ascii"))
           if receiveDataFormat == "Hex":
             receiveDataText.insert(END, bytes(readData).hex())
+          receiveDataText.see(END)
       except Exception as e:
         print(e)
-        time.sleep(1)
     else:
       print("Port is closed, receiving thread exit")
       sys.exit(1)
@@ -204,19 +204,19 @@ if __name__ == "__main__":
       # Remove \n in the end
       text: str = sendText.get(0.0, END)[:-1]
       sendDataFormat: str = sendDataFormatCombo.get()
-      if sendDataFormat == "UTF-8":
-        serialPort.write(text.encode("utf-8"))
-      if sendDataFormat == "ASCII":
-        serialPort.write(text.encode("ascii"))
-      if sendDataFormat == "Hex":
-        # Remove 0x(0X) at the beginning of text
-        if text.startswith("0x") or text.startswith("0X"):
-          text = text[2:]
-        # Add a 0 at the beginning of text which have odd characters
-        if (len(text) % 2) == 1:
-          text = "0" + text
       try:
-        serialPort.write(bytes.fromhex(text))
+        if sendDataFormat == "UTF-8":
+          serialPort.write(text.encode("utf-8"))
+        if sendDataFormat == "ASCII":
+          serialPort.write(text.encode("ascii"))
+        if sendDataFormat == "Hex":
+          # Remove 0x(0X) at the beginning of text
+          if text.startswith("0x") or text.startswith("0X"):
+            text = text[2:]
+          # Add a 0 at the beginning of text which have odd characters
+          if (len(text) % 2) == 1:
+            text = "0" + text
+          serialPort.write(bytes.fromhex(text))
         sendText.delete(0.0, END)
       except Exception as e:
         print(e)
