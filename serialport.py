@@ -40,7 +40,6 @@ def receiveDataThread(serialPort: serial.Serial, receiveDataText: ScrolledText):
             receiveDataText.insert(END, bytes(readData).decode("ascii"))
           if receiveDataFormat == "Hex":
             receiveDataText.insert(END, bytes(readData).hex())
-          receiveDataText.see(END)
       except Exception as e:
         print(e)
     else:
@@ -218,6 +217,7 @@ if __name__ == "__main__":
             text = "0" + text
           serialPort.write(bytes.fromhex(text))
         sendText.delete(0.0, END)
+        receiveDataText.see(END)
       except Exception as e:
         print(e)
 
