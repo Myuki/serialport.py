@@ -190,6 +190,7 @@ if __name__ == "__main__":
       operateButtonText.set("Close Port")
     else:
       operateButtonText.set("Open Port")
+    receiveDataText.see(END)
 
   # Send Button
   sendButton = Button(root, text="Send", width=9, height=1)
